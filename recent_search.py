@@ -40,13 +40,23 @@ def connect_to_endpoint(url, headers):
         raise Exception(response.status_code, response.text)
     return response.json()
 
+def paginate(url, headers, next_token=""):
+    if next_token:
+        full_url = f"{url}&next_token={next_token}"
+    else:
+        full_url = url
+        
+    data = connect_to_endpoint(full_url, headers)
+    yield data
+    if "next_token" in data.get("meta", {}):
+        yield from paginate(url, headers, data['meta']['next_token'])
 
 def main():
     bearer_token = auth()
     url = create_url()
     headers = create_headers(bearer_token)
-    json_response = connect_to_endpoint(url, headers)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
+    for json_response in paginate(url, headers):
+        print(json.dumps(json_response, indent=4, sort_keys=True))
 
 
 if __name__ == "__main__":
